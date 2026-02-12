@@ -199,7 +199,7 @@ def check_card(card_data, fake_data):
         elif '"status": "succeeded"' in res3.text:
             return f'{P} >> LİVE ✅'
         elif "thank_you" in res3.text or "receipt" in res3.text:
-            return f'{P} >> LIVE - CHARGED'
+            return f'{P} >> LIVE - CHARGED😈'
         elif "incorrect_number" in res3.text:
             return f'{P} >> incorrect_number'
         elif "requires_action" in res3.text:
@@ -264,10 +264,27 @@ async def txt_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines = f.readlines()
         
         total_cards = len(lines)
-        await update.message.reply_text(f'📊 Total cards to check: {total_cards}')
+        
+        # Send initial stats message
+        stats_msg = await update.message.reply_text(
+            f'⏳ **Checking...**\n\n'
+            f'📊 Total: {total_cards}\n'
+            f'✅ Live: 0\n'
+            f'😈 Charged: 0\n'
+            f'❌ Declined: 0\n'
+            f'💰 Insufficient: 0\n'
+            f'🔢 CVC Error: 0\n'
+            f'⚠️ Other: 0\n'
+            f'📉 Checked: 0/{total_cards}'
+        )
         
         checked = 0
-        live_cards = []
+        live = 0
+        charged = 0
+        declined = 0
+        insufficient = 0
+        cvc_error = 0
+        other = 0
         
         for line in lines:
             if stop_flag:
@@ -285,28 +302,68 @@ async def txt_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             result = check_card(line, fake_data)
             checked += 1
             
-            # Send result
-            await update.message.reply_text(result)
+            # Categorize result
+            should_send = False
             
-            # Save live cards
-            if 'LİVE' in result or 'LIVE' in result:
-                live_cards.append(result)
+            if 'LİVE' in result:
+                live += 1
+                should_send = True
+            elif 'CHARGED' in result:
+                charged += 1
+                should_send = True
+            elif 'insufficient_funds' in result:
+                insufficient += 1
+                should_send = True
+            elif 'incorrect_cvc' in result:
+                cvc_error += 1
+                should_send = True
+            elif 'card_declined' in result:
+                declined += 1
+            else:
+                other += 1
+            
+            # Send message ONLY for specific results
+            if should_send:
+                # Add the devil emoji for charged
+                if 'CHARGED' in result and '😈' not in result:
+                    result = result.replace('CHARGED', 'CHARGED 😈')
+                await update.message.reply_text(result)
+            
+            # Update stats every 5 cards or at the end to avoid flood limits
+            if checked % 5 == 0 or checked == total_cards:
+                try:
+                    await stats_msg.edit_text(
+                        f'⏳ **Checking...**\n\n'
+                        f'📊 Total: {total_cards}\n'
+                        f'✅ Live: {live}\n'
+                        f'😈 Charged: {charged}\n'
+                        f'❌ Declined: {declined}\n'
+                        f'💰 Insufficient: {insufficient}\n'
+                        f'🔢 CVC Error: {cvc_error}\n'
+                        f'⚠️ Other: {other}\n'
+                        f'📉 Checked: {checked}/{total_cards}'
+                    )
+                except Exception:
+                    pass # Ignore edit errors
             
             # Small delay to avoid rate limiting
             await asyncio.sleep(1)
         
-        # Send summary
-        if not stop_flag:
-            summary = f'\n\n📊 **Checking Complete!**\n\n'
-            summary += f'Total Checked: {checked}/{total_cards}\n'
-            summary += f'Live Cards: {len(live_cards)}\n\n'
-            
-            if live_cards:
-                summary += '✅ **Live Cards:**\n'
-                for card in live_cards:
-                    summary += f'{card}\n'
-            
-            await update.message.reply_text(summary)
+        # Final stats update
+        try:
+            await stats_msg.edit_text(
+                f'✅ **Checking Complete!**\n\n'
+                f'📊 Total: {total_cards}\n'
+                f'✅ Live: {live}\n'
+                f'😈 Charged: {charged}\n'
+                f'❌ Declined: {declined}\n'
+                f'💰 Insufficient: {insufficient}\n'
+                f'🔢 CVC Error: {cvc_error}\n'
+                f'⚠️ Other: {other}\n'
+                f'📉 Checked: {checked}/{total_cards}'
+            )
+        except Exception:
+            pass
         
         # Clean up
         os.remove(file_path)
